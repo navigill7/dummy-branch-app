@@ -652,6 +652,223 @@ docker compose --env-file .env.dev logs -f api
 - **Production:** Data must persist across deployments
 - Easy to switch: DB_VOLUME environment variable
 
+## 📊 Monitoring & Observability
+
+The Branch Loan API includes a comprehensive monitoring stack with structured logging, Prometheus metrics, and Grafana dashboards.
+
+### Quick Start with Monitoring
+
+```bash
+# Automated setup (recommended)
+chmod +x scripts/setup_monitoring.sh
+./scripts/setup_monitoring.sh
+
+# Or manual setup
+docker compose --env-file .env.dev up -d
+docker compose --env-file .env.dev exec api alembic upgrade head
+docker compose --env-file .env.dev exec api python scripts/seed.py
+```
+
+### Access Monitoring Tools
+
+| Tool | URL | Credentials |
+|------|-----|-------------|
+| **Grafana Dashboard** | http://localhost:3000 | admin / admin |
+| **Prometheus** | http://localhost:9090 | No auth |
+| **API Metrics** | https://branchloans.com/metrics | No auth |
+
+### Key Features
+
+#### 1. Structured JSON Logging
+
+All logs are output in JSON format with contextual information:
+
+```json
+{
+  "timestamp": "2025-11-06T10:30:45.123456Z",
+  "level": "INFO",
+  "message": "Request completed",
+  "request_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "method": "POST",
+  "path": "/api/loans",
+  "status_code": 201,
+  "duration_ms": 45.67
+}
+```
+
+**View formatted logs:**
+```bash
+docker compose --env-file .env.dev logs api | grep -o '{.*}' | jq .
+```
+
+#### 2. Prometheus Metrics
+
+Available metrics include:
+
+- **HTTP Metrics**: Request count, duration, errors, in-progress requests
+- **Business Metrics**: Loans created, loan amounts, active loans by status
+- **System Metrics**: Database connections, error rates
+
+**Example queries:**
+```promql
+# Request rate (requests/second)
+rate(http_requests_total[5m])
+
+# 95th percentile response time
+histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
+
+# Loan creation rate
+rate(loans_created_total[5m])
+```
+
+#### 3. Grafana Dashboard
+
+Pre-configured dashboard showing:
+
+- ✅ Request rate and response times
+- ✅ HTTP status code distribution
+- ✅ Active loans by status
+- ✅ Error rates and trends
+- ✅ Business metrics (loan creation, amounts)
+
+**Access Dashboard:**
+1. Go to http://localhost:3000
+2. Login with admin/admin
+3. Navigate to: Dashboards → Branch Loan API - Monitoring Dashboard
+
+#### 4. Enhanced Health Checks
+
+Three health check endpoints for different purposes:
+
+```bash
+# Comprehensive health check (verifies DB connectivity)
+curl -k https://branchloans.com/health
+
+# Kubernetes-style readiness probe
+curl -k https://branchloans.com/readiness
+
+# Kubernetes-style liveness probe
+curl -k https://branchloans.com/liveness
+```
+
+**Response example:**
+```json
+{
+  "status": "ok",
+  "timestamp": 1699276800.123,
+  "checks": {
+    "api": {"status": "healthy", "message": "API service is running"},
+    "database": {"status": "healthy", "message": "Database connection successful"}
+  }
+}
+```
+
+### Generate Test Data
+
+Create test traffic to populate metrics:
+
+```bash
+# Create sample loans
+for i in {1..10}; do
+  curl -k -X POST https://branchloans.com/api/loans \
+    -H 'Content-Type: application/json' \
+    -d "{
+      \"borrower_id\": \"test_user_$i\",
+      \"amount\": $((10000 + RANDOM % 40000)),
+      \"currency\": \"INR\",
+      \"term_months\": 12,
+      \"interest_rate_apr\": 18.5
+    }"
+done
+
+# Generate API traffic
+for i in {1..50}; do
+  curl -k https://branchloans.com/api/loans > /dev/null 2>&1
+  sleep 0.1
+done
+```
+
+### Monitoring Architecture
+
+```
+┌──────────┐
+│  Client  │
+└─────┬────┘
+      │
+      ▼
+┌─────────────┐    Structured      ┌──────────┐
+│  Flask API  │─────Logs──────────▶│  stdout  │
+│             │                     └──────────┘
+│  Middleware │
+│  - Logging  │    Prometheus
+│  - Metrics  │───/metrics────┐
+└─────────────┘               │
+                              ▼
+                      ┌───────────────┐
+                      │  Prometheus   │
+                      │   (Scrapes)   │
+                      └───────┬───────┘
+                              │
+                              ▼
+                      ┌───────────────┐
+                      │    Grafana    │
+                      │  (Visualize)  │
+                      └───────────────┘
+```
+
+### Log Levels by Environment
+
+| Environment | LOG_LEVEL | Usage |
+|------------|-----------|-------|
+| Development | DEBUG | Detailed debugging, all requests logged |
+| Staging | INFO | General info, important events |
+| Production | WARNING | Only warnings and errors |
+
+### Request Tracing
+
+Every request gets a unique ID for end-to-end tracing:
+
+```bash
+# Make request and capture Request ID
+RESPONSE=$(curl -i -k https://branchloans.com/api/loans)
+REQUEST_ID=$(echo "$RESPONSE" | grep -i x-request-id | cut -d' ' -f2)
+
+# Find all logs for this specific request
+docker compose --env-file .env.dev logs api | grep "$REQUEST_ID"
+```
+
+### Monitoring Best Practices
+
+1. **Set up alerts** for critical metrics (error rate, response time)
+2. **Monitor trends** over time to identify performance degradation
+3. **Use request IDs** for debugging production issues
+4. **Review logs regularly** to catch issues early
+5. **Track business metrics** (loan creation rate, amounts) alongside technical metrics
+
+### Stopping Monitoring Stack
+
+```bash
+# Stop all services
+docker compose --env-file .env.dev down
+
+# Stop and remove volumes (clean slate)
+docker compose --env-file .env.dev down -v
+```
+
+### Detailed Documentation
+
+For comprehensive monitoring documentation, see **[MONITORING.md](MONITORING.md)**:
+
+- Complete metrics reference
+- Prometheus query examples
+- Grafana dashboard customization
+- Troubleshooting guide
+- Production best practices
+
+---
+
+**Continue to the next section: [API Documentation](#-api-documentation)**
+
 ## 🎯 Future Improvements
 
 Given more time, I would add:
@@ -708,7 +925,7 @@ Given more time, I would add:
 
 ```bash
 # 1. Fork and clone
-git clone <your-fork>
+git clone .....
 
 # 2. Create feature branch
 git checkout -b feature/amazing-feature
