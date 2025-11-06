@@ -210,6 +210,9 @@ curl -k https://branchloans.com/api/stats
 
 ## 🔄 CI/CD Pipeline
 
+<img width="1363" height="307" alt="image" src="https://github.com/user-attachments/assets/5cd20bee-3352-48ca-80d0-c8852ae4789e" />
+
+
 ### Pipeline Overview
 
 The GitHub Actions pipeline automates the entire build, test, and deployment process.
@@ -879,7 +882,3 @@ This project is for educational purposes as part of Branch's DevOps Intern assig
 - Branch's DevOps team for the assignment
 - Flask and SQLAlchemy communities
 - Docker and GitHub Actions documentation
-
----
-
-**Built with ❤️ for Branch's DevOps Intern Assignment 2025**
