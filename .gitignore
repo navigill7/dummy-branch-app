@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Flask
+instance/
+.webassets-cache
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables (local overrides)
+.env
+.env.local
+
+# SSL Certificates (SECURITY: Never commit private keys!)
+docker/certs/*.key
+docker/certs/branchloans.key
+
+# You can commit the certificate (.crt) but NEVER the private key (.key)
+# Uncomment the line below if you want to also ignore the certificate
+# docker/certs/*.crt
+
+# Docker
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Alembic
+alembic.ini.local
